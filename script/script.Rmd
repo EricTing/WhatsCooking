@@ -1,0 +1,135 @@
+---
+title: "What's cooking"
+author: "Haoyu Qi"
+date: "November 16, 2015"
+output: 
+  html_document: 
+    keep_md: yes
+---
+
+This is a script for Kaggle competition What's Cooking, see <https://www.kaggle.com/c/whats-cooking>. 
+Let's briefly describe the streamline here.   
+1. Combine training and testing set  
+2. Using `tm` package to create corpus from ingredients variable  
+3. Stem the document(reduce similar words)  
+4. creat DTM   
+5. eliminate low frequency and high frequency   
+6. eliminate some useless work(and, all-purpose...) and numbers   
+7. transform back to dataframe, add back cuisine class  
+8. split back into train and test set  
+9. train the model 
+
+## Libs
+```{r}
+require("SnowballC")
+require("caret")
+require("tm")
+require("randomForest")
+require("dplyr")
+require("jsonlite")
+```
+
+## Get data
+Unzip the files if it has not been done before
+```{r}
+if (!file.exists("../data/test.json")){
+    unzip("test.json.zip")
+}
+    
+if (!file.exists("../data/train.json")){
+    unzip("train.json.zip")
+}
+
+if (!file.exists("../data/sample_submission.csv")){
+    unzip("sample_submission.csv.zip")
+}
+
+```
+
+
+Now we read the Json file into dataframe
+```{r cache=TRUE}
+library(jsonlite)
+df_train <- fromJSON("../data/train.json", flatten = TRUE)
+df_test <- fromJSON("../data/test.json",  flatten = TRUE)
+head(df_train,2)
+```
+
+Let's first study the distribution of differnt type of cuisine.
+```{r message=FALSE}
+library(dplyr)
+df_train$cuisine <- as.factor(df_train$cuisine)
+cuisine_dist <- df_train %>% group_by(cuisine) %>% summarise(num = n(), percentage = n()/nrow(df_train)*100)
+cuisine_dist
+barplot(cuisine_dist$num, names.arg = cuisine_dist$cuisine, las =2)
+```
+
+## Data processing
+We first combine the train and test set so that they will be transformed in the same way.
+```{r cache=TRUE}
+combi <- rbind(select(df_train,-cuisine),df_test)
+```
+Now we use the text mining packege
+```{r message=FALSE}
+#We treat the ingredients variable as bag of words
+library(tm)
+library(SnowballC)
+
+#Create corpus
+corpus = Corpus(VectorSource(combi$ingredients))
+
+#To view the ingredients of each content
+corpus[[1]]$content
+```
+As we can see, each element of corpus corresponds to each row in our combi dataframe. Therefore the order is preserved. Now let's clean the data, we will remove all the stop words, all the numbers and stem the document.
+```{r cache=TRUE}
+corpus = tm_map(corpus, removeWords, stopwords("english"))
+corpus = tm_map(corpus, removeNumbers)
+corpus = tm_map(corpus, stemDocument)
+corpus[[1]]$content
+```
+
+Now we creat the DTM from corpus and make some observation
+```{r cache=TRUE}
+corpus = tm_map(corpus, PlainTextDocument)
+frequencies=DocumentTermMatrix(corpus)
+frequencies
+low <- findFreqTerms(frequencies, highfreq = 0.005*nrow(combi))
+head(low)
+high <- findFreqTerms(frequencies, lowfreq =8000)
+```
+As we can see, around `r length(low)` ingredients appear less than one thousandth. For high frequent ingredient, most of it are universal thus has no power to differentiate different cuisines.  Now let's remove them
+```{r}
+sparse = removeSparseTerms(frequencies, 0.995)
+df_ingred = as.data.frame(as.matrix(sparse))
+df_ingred <- df_ingred[,!colnames(df_ingred) %in% high]
+colnames(df_ingred) <- make.names(colnames(df_ingred))
+```
+Now we have a dataframe with `r ncol(df_ingred)` variables, which is nearly one tenth of our raw data. Split the dataframe back to train and test set
+```{r}
+train <- df_ingred[1:nrow(df_train),]
+test <- df_ingred[(nrow(df_train)+1):nrow(df_ingred),]
+train$cuisine <- as.factor(df_train$cuisine)
+#test$id <- df_test$id
+```
+
+
+## Model building
+split the train set for cross validation
+```{r}
+library(caret)
+inTrain <- createDataPartition(y = train$cuisine, p = 0.7, list = FALSE)
+training <- train[inTrain,]
+testing <- train[-inTrain,]
+```
+```{r cache=TRUE, eval=FALSE}
+set.seed(9347)
+library(randomForest)
+rf_fit  <- randomForest(y = training$cuisine, x = select(training, -cuisine), ntree = 100)
+```
+The confusion matrix
+```{r}
+confu <- readRDS(file = "./confusion.rds")
+confu
+```
+The accuracy is 0.73.
