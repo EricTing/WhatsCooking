@@ -1,5 +1,6 @@
 import json
 import pandas as pd
+import numpy as np
 from math import log10
 from itertools import chain
 from sklearn.metrics import pairwise_distances
@@ -120,20 +121,30 @@ def calculateVectorIfBelongs2ThisCuisine(cuisine, ingredients):
 
     return my_vector
 
-def calculateSim(v1, v2):
+
+def calculateIngredientsVector(ingredients):
+    my_vector = [0.0] * len(available_ingredients)
+    for ingredient in ingredients:
+        my_vector[indices[ingredient]] = 1
+    return my_vector
+
+
+def calculateSim(v1, v2):       # cannot give correct measure of similarity
     return pairwise_distances(v1, v2, metric='cosine')
+
 
 def rankByVecSim(ingredients):
     sims = []
     for cuisine in cuisines:
         cuisine_vector = cuisine_vectors[cuisine]
-        ingredients_vector = calculateVectorIfBelongs2ThisCuisine(cuisine, ingredients)
-        sim = calculateSim(cuisine_vector, ingredients_vector)
+        ingredients_vector = calculateIngredientsVector(ingredients)
+        sim = np.dot(cuisine_vector, ingredients_vector) /(np.linalg.norm(cuisine_vector) * np.linalg.norm(ingredients_vector))
         sims.append((cuisine, sim))
+        # print cuisine, sim
     sims.sort(key=lambda t: t[1], reverse=True)
     return sims[0][0]
 
-test_dset = raw_dset.sample(300)
+test_dset = raw_dset.sample(5000)
 predicted_cuisines = test_dset.ingredients.apply(lambda ingredients: rankByVecSim(ingredients))
 accuracy = sum(predicted_cuisines == test_dset.cuisine) / float(len(test_dset.cuisine))
 print accuracy
