@@ -3,6 +3,7 @@ from pandas import Series
 from pandas import DataFrame
 
 from sklearn.preprocessing import LabelEncoder
+from sklearn.grid_search import ParameterGrid
 from sklearn.pipeline import Pipeline
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.feature_selection import SelectPercentile, chi2
@@ -38,26 +39,46 @@ class ReadRecipe:
 def ingredientModel(train_raw, cv):
     ingred_pipe = Pipeline([
         ('tfidf', TfidfVectorizer(strip_accents='unicode', analyzer="char")),
-        ('feat', SelectPercentile(chi2, percentile=85)),
+        ('feat', SelectPercentile(chi2)),
         ('model', LogisticRegression())
     ])
 
-    train_idx, test_idx = list(cv)[0]
+    ingred_grid = {
+        'tfidf__ngram_range': [(2, 4)],
+        'feat__percentile': [95, 90, 85]
+    }
 
-    my_train = train_raw.iloc[train_idx]
-    tokens = my_train.ingredients.str.split(',? ').apply(lambda word_list: Series(word_list)).stack().reset_index(level=1, drop=True)
-    tokens.name = 'ingredient'
-    my_train = my_train[['cuisine']].join(tokens)
+    def score4OneMetaParameterSet(train_raw, cv, grid_paras):
+        ingred_pipe.set_params(**grid_paras)
 
-    ingred_pipe.fit(my_train['ingredient'], my_train['cuisine'])
+        total_score = 0.0
+        for train_idx, test_idx in cv:
+            my_train = train_raw.iloc[train_idx]
+            tokens = my_train.ingredients.str.split(',? ').apply(lambda word_list: Series(word_list)).stack().reset_index(level=1, drop=True)
+            tokens.name = 'ingredient'
+            my_train = my_train[['cuisine']].join(tokens)
 
-    def probaOfEachCuisin(recipe, model):
-        from operator import add
-        probas = [model.predict_proba([i]) for i in recipe]
-        proba_of_each = reduce(add, probas)[0]
-        return proba_of_each.argmax(0)
+            ingred_pipe.fit(my_train['ingredient'], my_train['cuisine'])
 
-    my_test = train_raw.iloc[test_idx]
-    predicted = my_test['ingredients'].str.split(',? ').apply(lambda recipe: probaOfEachCuisin(recipe, ingred_pipe))
-    score = accuracy_score(my_test.cuisine, predicted)
-    print score
+            def probaOfEachCuisin(recipe, model):
+                from operator import add
+                probas = [model.predict_proba([i]) for i in recipe]
+                proba_of_each = reduce(add, probas)[0]
+                return proba_of_each.argmax(0)
+
+            my_test = train_raw.iloc[test_idx]
+            predicted = my_test['ingredients'].str.split(',? ').apply(lambda recipe: probaOfEachCuisin(recipe, ingred_pipe))
+            score = accuracy_score(my_test.cuisine, predicted)
+            total_score += score
+
+        return total_score
+
+    best_score = 0
+    for g in ParameterGrid(ingred_grid):
+        score = score4OneMetaParameterSet(train_raw, cv, g)
+        if score > best_score:
+            best_score = score
+            best_grid = g
+
+    print "Best score: %0.5f" % best_score
+    print "Best grid:", best_grid
