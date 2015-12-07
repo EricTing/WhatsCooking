@@ -9,6 +9,9 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.feature_selection import SelectPercentile, chi2
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.grid_search import GridSearchCV
+from sklearn.ensemble import RandomForestClassifier
 
 
 def clean(ingredient):
@@ -82,3 +85,49 @@ def ingredientModel(train_raw, cv):
 
     print "Best score: %0.5f" % best_score
     print "Best grid:", best_grid
+
+
+def NaiveBayes(train_raw, cv=6, parallism=20):
+    pipe_line = Pipeline([
+        ('tfidf', TfidfVectorizer(strip_accents='unicode', analyzer="char")),
+        ('feat', SelectPercentile(chi2)),
+        ('model', MultinomialNB())
+    ])
+
+    grids = {
+        'tfidf__ngram_range': [(2, 4), (2, 5), (2, 6)],
+        'feat__percentile': [95, 90, 85, 80, 75, 70]
+    }
+
+    grid_search = GridSearchCV(pipe_line, grids, n_jobs=parallism,
+                               verbose=1, cv=cv)
+    grid_search.fit(train_raw.ingredients, train_raw.cuisine)
+
+    print("Best score: %0.3f" % grid_search.best_score_)
+    print("Best parameters set:")
+    best_parameters = grid_search.best_estimator_.get_params()
+    for param_name in sorted(grids.keys()):
+        print("\t%s: %r" % (param_name, best_parameters[param_name]))
+
+
+def RandomForest(train_raw, cv=6, parallism=20):
+    pipe_line = Pipeline([
+        ('tfidf', TfidfVectorizer(strip_accents='unicode', analyzer="char")),
+        ('feat', SelectPercentile(chi2)),
+        ('model', RandomForestClassifier(n_estimators=100))
+    ])
+
+    grids = {
+        'tfidf__ngram_range': [(2, 4), (2, 5), (2, 6)],
+        'feat__percentile': [95, 90, 85, 80, 75, 70]
+    }
+
+    grid_search = GridSearchCV(pipe_line, grids, n_jobs=parallism,
+                               verbose=1, cv=cv)
+    grid_search.fit(train_raw.ingredients, train_raw.cuisine)
+
+    print("Best score: %0.3f" % grid_search.best_score_)
+    print("Best parameters set:")
+    best_parameters = grid_search.best_estimator_.get_params()
+    for param_name in sorted(grids.keys()):
+        print("\t%s: %r" % (param_name, best_parameters[param_name]))

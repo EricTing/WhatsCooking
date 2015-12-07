@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-from helper import ReadRecipe, ingredientModel
-from sklearn.cross_validation import KFold
+
+from helper import ReadRecipe, NaiveBayes, RandomForest
 
 
 train_ifn = "../data/train.json"
@@ -10,12 +10,13 @@ read_recipe = ReadRecipe(train_ifn)
 
 train_raw, encoder = read_recipe.readTrain()
 
-cv = KFold(train_raw.shape[0], n_folds=6, shuffle=True)
-
 
 def main():
-    ingredientModel(train_raw, cv)
-    pass
+    print "Naive Bayes"
+    NaiveBayes(train_raw, cv=6, parallism=20)
+    print "Random Forest"
+    RandomForest(train_raw, cv=6, parallism=20)
+
 
 if __name__ == '__main__':
     main()
