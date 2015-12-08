@@ -12,8 +12,8 @@ train_raw, encoder = read_recipe.readTrain()
 
 
 def main():
-    print "Naive Bayes"
-    NaiveBayes(train_raw, cv=6, parallism=20)
+    # print "Naive Bayes"
+    # NaiveBayes(train_raw, cv=6, parallism=20)
     print "Random Forest"
     RandomForest(train_raw, cv=6, parallism=20)
 

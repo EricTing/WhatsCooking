@@ -13,6 +13,27 @@ from sklearn.naive_bayes import MultinomialNB
 from sklearn.grid_search import GridSearchCV
 from sklearn.ensemble import RandomForestClassifier
 
+from nltk import word_tokenize
+from nltk.stem import PorterStemmer, WordNetLemmatizer
+
+
+def porter(text):
+    tokens = word_tokenize(text)
+
+    my_stemmer = PorterStemmer()
+    tokens = [my_stemmer.stem(t) for t in tokens]
+
+    return tokens
+
+
+def wordnet(text):
+    tokens = word_tokenize(text)
+
+    my_stemmer = WordNetLemmatizer()
+    tokens = [my_stemmer.lemmatize(t) for t in tokens]
+
+    return tokens
+
 
 def clean(ingredient):
     # first letter should be alphabet and remaining letter may be alpha numerical
@@ -112,18 +133,30 @@ def NaiveBayes(train_raw, cv=6, parallism=20):
 
 def RandomForest(train_raw, cv=6, parallism=20):
     pipe_line = Pipeline([
-        ('tfidf', TfidfVectorizer(strip_accents='unicode', analyzer="char")),
+        ('tfidf', TfidfVectorizer(
+            strip_accents='unicode',
+            stop_words='english')),
         ('feat', SelectPercentile(chi2)),
-        ('model', RandomForestClassifier(n_estimators=100))
+        ('model', RandomForestClassifier(n_estimators=50))
     ])
 
     grids = {
-        'tfidf__ngram_range': [(2, 4), (2, 5), (2, 6)],
-        'feat__percentile': [95, 90, 85, 80, 75, 70]
+        # 'tfidf__tokenizer': [porter, wordnet],
+        'tfidf__tokenizer': [wordnet],
+
+        'tfidf__max_df': [0.5, 0.4, 0.3, 0.2],
+
+        # 'tfidf__analyzer': ["char", "word"],
+        'tfidf__analyzer': ["word"],
+
+        # 'tfidf__ngram_range': [(1, 1), (2, 4), (2, 5), (2, 6), (3, 5), (3, 6)],
+        'tfidf__ngram_range': [(1, 1)],
+
+        'feat__percentile': [50, 40, 30, 20, 10]
     }
 
     grid_search = GridSearchCV(pipe_line, grids, n_jobs=parallism,
-                               verbose=1, cv=cv)
+                               verbose=2, cv=cv)
     grid_search.fit(train_raw.ingredients, train_raw.cuisine)
 
     print("Best score: %0.3f" % grid_search.best_score_)
