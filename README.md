@@ -52,18 +52,19 @@ tfidf__tokenizer: <function wordnet at 0x2ae685d86050>
 
 
 ## LogisticRegression
-Best score: 0.788
+Best score: 0.791
 
 Best parameters set:
 
-feat__percentile: 50
+feat__percentile: 80
 
-model__C: 10
+model__C: 5
 
 tfidf__analyzer: 'word'
 
-tfidf__max_df: 0.5
+tfidf__max_df: 0.9
 
 tfidf__ngram_range: (1, 1)
 
-tfidf__tokenizer: <function wordnet at 0x2ad74c7340c8>
+tfidf__tokenizer: <function wordnet at 0x2b065874f0c8>
+

@@ -216,13 +216,13 @@ def LogisticReg(train_raw, cv=6, parallism=20):
     grids = {
         'tfidf__tokenizer': [wordnet],
 
-        'tfidf__max_df': [0.5, 0.4, 0.3, 0.2, 0.1],
+        'tfidf__max_df': [0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1],
 
         'tfidf__analyzer': ["word"],
 
         'tfidf__ngram_range': [(1, 1)],
 
-        'feat__percentile': [50, 40, 30, 20, 10],
+        'feat__percentile': [90, 80, 70, 60, 50, 40, 30, 20, 10],
 
         'model__C': [1, 5, 10]
     }
