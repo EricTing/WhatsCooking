@@ -12,7 +12,6 @@ from sklearn.metrics import accuracy_score
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.grid_search import GridSearchCV
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import AdaBoostClassifier
 
 from nltk import word_tokenize
@@ -192,6 +191,40 @@ def AdaBoost(train_raw, cv=6, parallism=20):
         'model__learning_rate': [0.5, 1.0, 1.5, 2.0, 2.5, 3.0],
 
         'model__n_estimators': [50, 100, 200]
+    }
+
+    grid_search = GridSearchCV(pipe_line, grids, n_jobs=parallism,
+                               verbose=2, cv=cv)
+    grid_search.fit(train_raw.ingredients, train_raw.cuisine)
+
+    print("Best score: %0.3f" % grid_search.best_score_)
+    print("Best parameters set:")
+    best_parameters = grid_search.best_estimator_.get_params()
+    for param_name in sorted(grids.keys()):
+        print("\t%s: %r" % (param_name, best_parameters[param_name]))
+
+
+def LogisticReg(train_raw, cv=6, parallism=20):
+    pipe_line = Pipeline([
+        ('tfidf', TfidfVectorizer(
+            strip_accents='unicode',
+            stop_words='english')),
+        ('feat', SelectPercentile(chi2)),
+        ('model', LogisticRegression())
+    ])
+
+    grids = {
+        'tfidf__tokenizer': [wordnet],
+
+        'tfidf__max_df': [0.5, 0.4, 0.3, 0.2, 0.1],
+
+        'tfidf__analyzer': ["word"],
+
+        'tfidf__ngram_range': [(1, 1)],
+
+        'feat__percentile': [50, 40, 30, 20, 10],
+
+        'model__C': [1, 5, 10]
     }
 
     grid_search = GridSearchCV(pipe_line, grids, n_jobs=parallism,

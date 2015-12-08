@@ -30,6 +30,8 @@ tfidf__ngram_range: (1, 1)
 tfidf__tokenizer: <function wordnet at 0x2aecf6e88f50>
 
 ## AdaBoost
+Why AdaBoost performs so poorly?
+
 Best score: 0.549
 
 Best parameters set:
@@ -49,3 +51,19 @@ tfidf__ngram_range: (1, 1)
 tfidf__tokenizer: <function wordnet at 0x2ae685d86050>
 
 
+## LogisticRegression
+Best score: 0.788
+
+Best parameters set:
+
+feat__percentile: 50
+
+model__C: 10
+
+tfidf__analyzer: 'word'
+
+tfidf__max_df: 0.5
+
+tfidf__ngram_range: (1, 1)
+
+tfidf__tokenizer: <function wordnet at 0x2ad74c7340c8>
