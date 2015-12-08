@@ -61,6 +61,16 @@ class ReadRecipe:
 
         return dset, encoder
 
+    def readTest(self):
+        ids = [my['id'] for my in self.json]
+        ingredients = [my['ingredients'] for my in self.json]
+        ingredients = [', '.join(clean(i)) for i in ingredients]
+
+        dset = DataFrame({"id": ids,
+                          "ingredients": ingredients})
+
+        return dset
+
 
 def ingredientModel(train_raw, cv):
     ingred_pipe = Pipeline([
@@ -273,3 +283,33 @@ def SVC(train_raw, cv=6, parallism=20):
     best_parameters = grid_search.best_estimator_.get_params()
     for param_name in sorted(grids.keys()):
         print("\t%s: %r" % (param_name, best_parameters[param_name]))
+
+
+def predict(train_raw, test_raw, encoder):
+    pipe_line = Pipeline([
+        ('tfidf', TfidfVectorizer(
+            strip_accents='unicode',
+            stop_words='english')),
+        ('feat', SelectPercentile(chi2)),
+        ('model', LogisticRegression())
+    ])
+
+    grids = {
+        'tfidf__tokenizer': [wordnet],
+
+        'tfidf__max_df': [0.9],
+
+        'tfidf__analyzer': ["word"],
+
+        'tfidf__ngram_range': [(1, 1)],
+
+        'feat__percentile': [80],
+
+        'model__C': [5]
+    }
+
+    grid_search = GridSearchCV(pipe_line, grids)
+    grid_search.fit(train_raw.ingredients, train_raw.cuisine)
+    predictions = grid_search.predict(test_raw.ingredients)
+    test_raw['cuisine'] = encoder.inverse_transform(predictions)
+    test_raw[['id', 'cuisine']].to_csv("./submission.csv", index=False)
