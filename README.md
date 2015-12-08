@@ -68,3 +68,22 @@ tfidf__ngram_range: (1, 1)
 
 tfidf__tokenizer: <function wordnet at 0x2b065874f0c8>
 
+
+## SVC
+Best score: 0.790
+
+Best parameters set:
+
+feat__percentile: 80
+
+model__C: 1.0
+
+model__max_iter: 1000
+
+tfidf__analyzer: 'word'
+
+tfidf__max_df: 0.9
+
+tfidf__ngram_range: (1, 1)
+
+tfidf__tokenizer: <function wordnet at 0x2b58e14e8140>

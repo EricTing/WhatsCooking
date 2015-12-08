@@ -13,6 +13,7 @@ from sklearn.naive_bayes import MultinomialNB
 from sklearn.grid_search import GridSearchCV
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import AdaBoostClassifier
+from sklearn.svm import LinearSVC
 
 from nltk import word_tokenize
 from nltk.stem import PorterStemmer, WordNetLemmatizer
@@ -225,6 +226,42 @@ def LogisticReg(train_raw, cv=6, parallism=20):
         'feat__percentile': [90, 80, 70, 60, 50, 40, 30, 20, 10],
 
         'model__C': [1, 5, 10]
+    }
+
+    grid_search = GridSearchCV(pipe_line, grids, n_jobs=parallism,
+                               verbose=2, cv=cv)
+    grid_search.fit(train_raw.ingredients, train_raw.cuisine)
+
+    print("Best score: %0.3f" % grid_search.best_score_)
+    print("Best parameters set:")
+    best_parameters = grid_search.best_estimator_.get_params()
+    for param_name in sorted(grids.keys()):
+        print("\t%s: %r" % (param_name, best_parameters[param_name]))
+
+
+def SVC(train_raw, cv=6, parallism=20):
+    pipe_line = Pipeline([
+        ('tfidf', TfidfVectorizer(
+            strip_accents='unicode',
+            stop_words='english')),
+        ('feat', SelectPercentile(chi2)),
+        ('model', LinearSVC())
+    ])
+
+    grids = {
+        'tfidf__tokenizer': [wordnet],
+
+        'tfidf__max_df': [0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1],
+
+        'tfidf__analyzer': ["word"],
+
+        'tfidf__ngram_range': [(1, 1)],
+
+        'feat__percentile': [95, 90, 80, 70],
+
+        'model__C': [1.0, 2.0, 5.0, 10.0],
+
+        'model__max_iter': [1000, 3000]
     }
 
     grid_search = GridSearchCV(pipe_line, grids, n_jobs=parallism,
